@@ -25,5 +25,6 @@ detrend_coral_interp <- function(dataframe, coral, proxy, time_vec){
   output <- interp1(as.numeric(dataframe_2$age), as.numeric(detrended), xi[[1]], method = c("linear"))
   new_frame <- data.frame(xi, output) %>%
     mutate(Coral_name = coral)
+  colnames(new_frame) <- c("age_int", "d15n", "Coral_name")
   return(new_frame)
 }

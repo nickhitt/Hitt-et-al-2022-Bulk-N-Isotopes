@@ -12,16 +12,18 @@ library(pracma)
 
 source("~/Dropbox/Marsden Black Coral Project/R Codes/Hitt-et-al-2022-Bulk-N-Isotopes/detrend_functions.R")
 
-data <- data.frame(read_excel("~/Dropbox/Marsden Black Coral Project/R Codes/Hitt-et-al-2022-Bulk-N-Isotopes/Nitrogen Isotope Data.xlsx")) %>%
+data <- data.frame(read_excel("~/Dropbox/Marsden Black Coral Project/R Codes/Hitt-et-al-2022-Bulk-N-Isotopes/Nitrogen Isotope Data_edit2.xlsx")) %>%
   dplyr::mutate(Coral_name = case_when(Coral == "35104" ~ "EAuC2",
                                        Coral == "64344" ~ "EAuC1",
-                                       Coral == "47996" ~ "STF1"))
+                                       Coral == "47996" ~ "STF1",
+                                       Coral == "SH9" ~ "SH9",
+                                       Coral == "SH10" ~ "SH10"))
 
 means <- aggregate(d15n ~ Coral_name, data, mean)
 
 coral_steps <- rep(0,3)
 for (i in 1:3){
-  coral <- c("EAuC1", "EAuC2", "STF1")
+  coral <- c("EAuC1", "EAuC2", "STF1", "SH9", "SH10")
   new_df <- data %>%
     filter(Coral_name %in% coral[i]) %>%
     select(age)
@@ -32,8 +34,8 @@ for (i in 1:3){
   coral_steps[i] <- max(new_age)
 }
 
-min_age <- ceiling(min(data[which(data$Coral_name == "STF1"),1])) 
-max_age <- floor(max(data[which(data$Coral_name == "EAuC2"),1])) 
+min_age <- ceiling(min(data[which(data$Coral_name == "EAuC1"),1])) 
+max_age <- floor(max(data[which(data$Coral_name == "SH9"),1])) 
 
 time_vec <- seq(from = min_age, to = max_age, by = ceiling(max(coral_steps)))
 time_vec <- data.frame(time_vec) %>%
@@ -41,17 +43,26 @@ time_vec <- data.frame(time_vec) %>%
 
 detrended_eauc1 <- detrend_coral(data, "EAuC1", "d15n") 
 detrended_eauc2 <- detrend_coral(data, "EAuC2", "d15n") 
-detrended_stf1 <- detrend_coral(data, "STF1", "d15n") 
+detrended_stf1 <- detrend_coral(data, "STF1", "d15n")
+detrended_sh9 <- detrend_coral(data, "SH9", "d15n")
+detrended_sh10 <- detrend_coral(data, "SH10", "d15n")
 
-figure3a <- rbind(detrended_eauc1, detrended_stf1) %>%
-  rename(age = dataframe_2.age, d15n = detrended) %>%
-  ggplot(mapping = aes(age, d15n, group = Coral_name)) +
+detrended_eauc1_int <- detrend_coral_interp(data, "EAuC1", "d15n", time_vec) 
+detrended_eauc2_int <- detrend_coral_interp(data, "EAuC2", "d15n", time_vec) 
+detrended_stf1_int <- detrend_coral_interp(data, "STF1", "d15n", time_vec)
+detrended_sh9_int <- detrend_coral_interp(data, "SH9", "d15n", time_vec) 
+colnames(detrended_sh9_int) <- c("age_int", "d15n", "Coral_name")
+detrended_sh10_int <- detrend_coral_interp(data, "SH10", "d15n", time_vec)
+colnames(detrended_sh10_int) <- c("age_int", "d15n", "Coral_name")
+
+
+figure3a <- rbind(detrended_eauc2_int, detrended_eauc1_int, detrended_sh9_int,detrended_sh10_int) %>%
+  ggplot(mapping = aes(age_int, d15n, group = Coral_name)) +
   geom_point(aes(colour = Coral_name)) + 
   geom_line(aes(colour = Coral_name)) +
   xlim(0, 3000) +
   xlab("Time (cal BP)") +
-  scale_x_continuous(breaks=seq(0,1500,250)) +
-  facet_grid(rows = vars(Coral_name)) +
+  scale_x_continuous(breaks=seq(0,4500,500)) +
   theme(panel.background = element_rect(fill = "white", colour = "black", size = 1),
         legend.box.background = element_rect(),
         legend.box.margin = margin(6, 6, 6, 6),
