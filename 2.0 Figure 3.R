@@ -3,6 +3,8 @@
 
 library(dplyr)
 library(readxl)
+library(tidyr)
+library(broom)
 library(stats)
 library(gridExtra)
 library(ggplot2)
@@ -56,7 +58,7 @@ detrended_sh10_int <- detrend_coral_interp(data, "SH10", "d15n", time_vec)
 colnames(detrended_sh10_int) <- c("age_int", "d15n", "Coral_name")
 
 
-figure3a <- rbind(detrended_eauc2_int, detrended_eauc1_int, detrended_sh9_int,detrended_sh10_int) %>%
+figure3a <- rbind(detrended_eauc2_int, detrended_eauc1_int) %>%
   ggplot(mapping = aes(age_int, d15n, group = Coral_name)) +
   geom_point(aes(colour = Coral_name)) + 
   geom_line(aes(colour = Coral_name)) +
@@ -64,15 +66,82 @@ figure3a <- rbind(detrended_eauc2_int, detrended_eauc1_int, detrended_sh9_int,de
   xlab("Time (cal BP)") +
   scale_x_continuous(breaks=seq(0,4500,500)) +
   theme(panel.background = element_rect(fill = "white", colour = "black", size = 1),
-        legend.box.background = element_rect(),
-        legend.box.margin = margin(6, 6, 6, 6),
+        legend.background = element_rect(size = 0.5, colour = 1),
+        legend.text = element_text(size=8),
+        legend.title = element_text(size=8),
         panel.grid.major = element_blank(), 
         legend.key = element_rect(colour = "transparent", fill = "white"),
-        panel.grid.minor = element_blank()) 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.direction = c("horizontal"),
+        legend.position= c(0.2,0.15)) 
 
 figure3a$labels$colour <- "Coral"
 figure3a$labels$y <- expression(paste("Detrended Bulk ", "\u03B4" ^ "15", "N", " (\u2030)"))
 
-figure3a$labels$title <- expression(paste("Southwest Pacific Corals Detrended Bulk ", "\u03B4" ^ "15", "N Data"))
+figure3a$labels$title <- expression(paste("Interpolated Southwest Pacific Corals Detrended Bulk ", "\u03B4" ^ "15", "N Data"))
 
 figure3a
+
+all_corals <- rbind(detrended_eauc2_int, detrended_eauc1_int, detrended_sh9_int,detrended_sh10_int)
+
+all_corals_reshaped <- all_corals %>%
+  pivot_wider(id_cols = age_int, names_from=Coral_name,values_from=d15n) %>%
+  arrange(age_int)
+
+figure3b <- all_corals_reshaped %>%
+  select(EAuC1, EAuC2,age_int) %>%
+  filter(!is.na(EAuC2) | !is.na(EAuC1)) %>%
+  ggplot(mapping = aes(EAuC1, EAuC2)) +
+  geom_point() + 
+  geom_smooth(method="lm") +
+  theme(panel.background = element_rect(fill = "white", colour = "black", size = 1),
+        legend.box.background = element_rect(),
+        legend.box.margin = margin(6, 6, 6, 6),
+        panel.grid.major = element_blank(), 
+        legend.key = element_rect(colour = "transparent", fill = "white"),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5)) 
+figure3b$labels$x <- expression(paste("EAuC1 Bulk ", "\u03B4" ^ "15", "N", " (\u2030)"))
+figure3b$labels$y <- expression(paste("EAuC2 Bulk ", "\u03B4" ^ "15", "N", " (\u2030)"))
+
+figure3b$labels$title <- expression(paste("Southwest Pacific Corals Detrended Bulk ", "\u03B4" ^ "15", "N Regression"))
+
+figure3b
+
+figure3 <- ggarrange(figure3a, figure3b,  
+                     labels = c("A", "B"),
+                     ncol = 1, nrow = 2)
+
+figure3
+
+### Correlation Analysis
+
+all_corals <- rbind(detrended_eauc2_int, detrended_eauc1_int, detrended_sh9_int,detrended_sh10_int)
+
+all_corals_reshaped <- all_corals %>%
+  pivot_wider(id_cols = age_int, names_from=Coral_name,values_from=d15n) %>%
+  arrange(age_int)
+
+eauc1_corr <- all_corals_reshaped %>%
+  filter(age_int < 1500 & age_int > 600) %>%
+  summarise(
+    eauc1_eauc2 = cor(EAuC2, EAuC1),
+    eauc1_sh9 = cor(EAuC1,SH9),
+    eauc2_sh9 = cor(EAuC2,SH9)
+  )
+
+eauc2_corr <- all_corals_reshaped %>%
+  filter(age_int > 600) %>%
+  summarise(
+    eauc2_sh9 = cor(EAuC2,SH9)
+  )
+
+all_corals_reshaped %>%
+  filter(age_int > 600) %>%
+  do(tidy(lm(EAuC2 ~ SH9, .)))
+
+all_corals_reshaped %>%
+  filter(age_int < 1500 & age_int > 600) %>%
+  do(tidy(lm(EAuC1 ~ EAuC2, .)))
+

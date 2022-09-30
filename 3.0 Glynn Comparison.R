@@ -51,10 +51,10 @@ figure_1 <- pacific_data %>%
                            #Coral_name == "SH10" ~ d15n - means[4,2],
                            #Coral_name == "L2" ~ d15n - means[4,2],
                            #Coral_name == "EAuC2" ~ as.numeric(d15n) - means[2,2])) %>%
-  ggplot(mapping = aes(age, anom, group = Coral_name)) +
+  ggplot(mapping = aes(age, d15n, group = Coral_name)) +
   geom_point(aes(colour=Coral_name)) + 
   #geom_line(aes(colour=Coral_name)) +
-  geom_smooth(method = "loess",  span = 0.1, aes(colour = Coral_name)) +
+  geom_smooth(smethod = "loess",  span = 0.1, aes(colour = Coral_name)) +
   xlab("Time (cal BP)") +
   scale_x_continuous(breaks=seq(0,3000,500)) +
   facet_grid(rows = vars(location),scales = "free_y") +
